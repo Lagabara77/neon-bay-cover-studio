@@ -1,6 +1,6 @@
 // Neon Bay Cover Studio — wiring: photo slots, panel framing, caption edits,
 // exports, and the deterministic screenshot scenes (./shots.js).
-import { renderCover, exportCoverPng, layoutPanels, LAYOUTS, GRADES } from './cover.js';
+import { renderCover, exportCoverPng, layoutPanels, panelDefaults, LAYOUTS, GRADES } from './cover.js';
 import { runShot } from './shots.js';
 
 const canvas = document.getElementById('cover');
@@ -15,20 +15,16 @@ const $ = (id) => document.getElementById(id);
 const state = {
   layout: 'grid4',
   grade: 'sunset',
+  gradeStrength: 1, // grade-strength slider, 0.5..1.5 (round 2)
   headline: 'Sunset Heist',
   tagline: 'One last score under the neon sun',
   footer: 'Neon Bay',
+  kicker: 'Neon Bay', // small brand line above the headline (round 2)
   photos: [null, null, null, null], // HTMLImageElement | null
   photoNames: ['', '', '', ''],
-  panels: [
-    // Defaults keep each face whole inside its window: the focus point sits
-    // on the face (upper third of each sample photo) and zooms stay modest,
-    // so a wide hero panel still shows eyes-to-chin, never a sliced face.
-    { photo: 0, zoom: 1, fx: 0.5, fy: 0.28 },
-    { photo: 1, zoom: 1, fx: 0.5, fy: 0.35 },
-    { photo: 0, zoom: 1.35, fx: 0.58, fy: 0.28 },
-    { photo: 1, zoom: 1.25, fx: 0.5, fy: 0.3 },
-  ],
+  // Round 2: framing defaults come from the renderer, tuned per layout so
+  // faces stay whole and the four panels show different crops.
+  panels: panelDefaults('grid4'),
 };
 let selectedPanel = 0;
 
@@ -148,11 +144,22 @@ $('sample-boulevard').addEventListener('click', async () => {
 });
 
 $('layout').addEventListener('change', (e) => {
-  if (LAYOUTS.includes(e.target.value)) state.layout = e.target.value;
+  if (LAYOUTS.includes(e.target.value)) {
+    state.layout = e.target.value;
+    // A new layout gets its own tuned framing — the old crops belong to
+    // the old panel shapes (round 2).
+    state.panels = panelDefaults(state.layout);
+    syncPanelControls();
+  }
   redraw();
 });
 $('grade').addEventListener('change', (e) => {
   if (GRADES.includes(e.target.value)) state.grade = e.target.value;
+  redraw();
+});
+$('grade-strength').addEventListener('input', (e) => {
+  state.gradeStrength = Number(e.target.value);
+  $('grade-strength-value').textContent = `${state.gradeStrength.toFixed(2)}×`;
   redraw();
 });
 $('size').addEventListener('change', (e) => {

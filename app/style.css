@@ -194,6 +194,33 @@ body.shot-cover #cover {
   box-shadow: none;
 }
 
+/* Screenshot mode: editor shot. Round 2: the controls used to spill past
+   the bottom of a 720px viewport (the Layout & grade fieldset was cut off).
+   In shot mode the controls become a two-column grid so every fieldset and
+   the status line fit in one frame, with the preview beside them. */
+body.shot-editor .app { gap: 16px; padding: 16px; }
+body.shot-editor .controls {
+  width: 640px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  align-items: start;
+  gap: 12px;
+}
+body.shot-editor .controls fieldset { padding: 10px 12px; }
+body.shot-editor .controls fieldset:nth-child(3) { grid-column: 1 / -1; }
+/* Fieldset 3 holds six controls: lay them out two-across in shot mode so
+   the zoom slider, reset button and status line fit in the frame too. */
+body.shot-editor .controls fieldset:nth-child(3) {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  column-gap: 12px;
+}
+body.shot-editor .controls fieldset:nth-child(3) .hint,
+body.shot-editor .controls fieldset:nth-child(3) #reset-frame { grid-column: 1 / -1; }
+body.shot-editor .controls label { margin-bottom: 8px; }
+body.shot-editor #status { grid-column: 1 / -1; }
+body.shot-editor #cover { max-height: calc(100vh - 150px); }
+
 @media (max-width: 860px) {
   .app { flex-direction: column; }
   .controls { width: 100%; }

@@ -7,7 +7,7 @@
 // Extra params: ?photo=pier|boulevard, ?caption=…, ?layout=…, ?grade=…,
 // ?size=1080x1080|1080x1350|1920x1080. window.__shotReady is set once the
 // scene has painted with its display fonts loaded.
-import { exportCoverPng, LAYOUTS, GRADES } from './cover.js';
+import { exportCoverPng, panelDefaults, LAYOUTS, GRADES } from './cover.js';
 
 const SAMPLES = ['pier', 'boulevard'];
 
@@ -36,6 +36,7 @@ export async function runShot(shot, query, api) {
   const { state } = api;
 
   if (shot === 'cover') document.body.classList.add('shot-cover');
+  if (shot === 'editor') document.body.classList.add('shot-editor');
 
   if (shot === 'export-test') {
     try {
@@ -62,9 +63,25 @@ export async function runShot(shot, query, api) {
   if (Number.isFinite(w) && Number.isFinite(h)) api.setCanvasSize(w, h);
 
   const layout = query.get('layout');
-  if (layout && LAYOUTS.includes(layout)) state.layout = layout;
+  if (layout && LAYOUTS.includes(layout)) {
+    state.layout = layout;
+    // Round 2: the layout's own tuned framing, so the shot shows whole
+    // faces and clearly different crops per panel.
+    state.panels = panelDefaults(layout);
+  }
   const grade = query.get('grade');
   if (grade && GRADES.includes(grade)) state.grade = grade;
+  // Round 2: ?strength= lets a shot push the grade a little harder
+  // (within the slider's own 0.5..1.5 range) and keeps the editor slider
+  // in sync with what the preview actually renders.
+  const strength = Number(query.get('strength'));
+  if (Number.isFinite(strength) && strength >= 0.5 && strength <= 1.5) {
+    state.gradeStrength = strength;
+    const slider = document.getElementById('grade-strength');
+    const label = document.getElementById('grade-strength-value');
+    if (slider) slider.value = String(strength);
+    if (label) label.textContent = `${strength.toFixed(2)}×`;
+  }
   state.headline = query.get('caption') ?? 'Sunset Heist';
   const tagline = query.get('tagline');
   if (tagline !== null) state.tagline = tagline;

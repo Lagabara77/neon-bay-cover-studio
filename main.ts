@@ -1,9 +1,12 @@
 // Neon Bay Cover Studio — make.fun entry point (Node 22, standard library only).
 //
-// The app itself is plain static files under app/ (index.html plus ES modules,
-// no build step, no network requests). This program hands the entry in: it
-// copies app/ and screenshots/ from beside this file into the output
-// directory and writes dossier.json there with the vendored make.fun library.
+// Round 2: same hand-in shape as round 1 — copy app/ and screenshots/ next
+// to this file into the output directory, then write dossier.json with the
+// vendored make.fun library — plus a fail-fast check that the app entry
+// point is actually there before anything is copied.
+//
+// The app itself is plain static files under app/ (index.html plus ES
+// modules, no build step, no network requests).
 //
 // Serve the app locally with `node serve.ts`, then open http://localhost:8080.
 // Outside the grader's container, MAKEFUN_OUTPUT_DIR stands in for /output:
@@ -16,14 +19,21 @@ import { buildDossier } from './vendor/makefun-app.ts';
 
 const here = fileURLToPath(new URL('.', import.meta.url));
 const out = process.env.MAKEFUN_OUTPUT_DIR ?? '/output';
+const appDir = join(here, 'app');
+const shotsDir = join(here, 'screenshots');
 
-// Copy the app first so the dossier can measure exactly what is handed in.
-mkdirSync(out, { recursive: true });
-cpSync(join(here, 'app'), join(out, 'app'), { recursive: true });
-mkdirSync(join(out, 'screenshots'), { recursive: true });
-if (existsSync(join(here, 'screenshots'))) {
-  cpSync(join(here, 'screenshots'), join(out, 'screenshots'), { recursive: true });
+// Fail fast with a readable error instead of handing in a broken entry.
+if (!existsSync(join(appDir, 'index.html'))) {
+  throw new Error(`app/index.html is missing under ${appDir} — nothing to hand in`);
 }
+if (!existsSync(shotsDir)) {
+  throw new Error(`screenshots/ is missing under ${here} — the entry needs its shots`);
+}
+
+// Copy the app first so the dossier measures exactly what is handed in.
+mkdirSync(out, { recursive: true });
+cpSync(appDir, join(out, 'app'), { recursive: true });
+cpSync(shotsDir, join(out, 'screenshots'), { recursive: true });
 
 // The scorer's own caps (from the kit's reference/gate.json): only
 // text_max_bytes shapes the dossier bytes; the other limits refuse an entry

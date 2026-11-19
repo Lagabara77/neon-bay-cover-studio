@@ -1,7 +1,13 @@
-Copyright 2020 The Anton Project Authors (https://github.com/googlefonts/AntonFont.git)
-
-This Font Software is licensed under the SIL Open Font License, Version 1.1.
-This license is copied below, and is also available with a FAQ at:
+Fonts shipped with Neon Bay Cover Studio (app/fonts/)
+------------------------------------------------------
+Anton-Regular.ttf
+  Copyright 2020 The Anton Project Authors
+  (https://github.com/googlefonts/AntonFont.git)
+BebasNeue-Regular.ttf
+  (shipped under the same SIL Open Font License, Version 1.1,
+  copied in full below; see the font's own OFL.txt in its source repo)
+Both fonts are licensed under the SIL Open Font License, Version 1.1,
+copied in full below. The license text is also available with a FAQ at:
 http://scripts.sil.org/OFL
 
 
@@ -18,7 +24,7 @@ with others.
 
 The OFL allows the licensed fonts to be used, studied, modified and
 redistributed freely as long as they are not sold by themselves. The
-fonts, including any derivative works, can be bundled, embedded, 
+fonts, including any derivative works, can be bundled, embedded,
 redistributed and/or sold with any software provided that any reserved
 names are not used by derivative works. The fonts and derivatives,
 however, cannot be released under any other type of license. The
