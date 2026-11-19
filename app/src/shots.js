@@ -5,9 +5,15 @@
 //   ?shot=export-test — runs the export path headlessly and reports
 //                        window.__exportOk (blob size > 0).
 // Extra params: ?photo=pier|boulevard, ?caption=…, ?layout=…, ?grade=…,
-// ?size=1080x1080|1080x1350|1920x1080. window.__shotReady is set once the
-// scene has painted with its display fonts loaded.
-import { exportCoverPng, panelDefaults, LAYOUTS, GRADES } from './cover.js';
+// ?size=1080x1080|1080x1350|1920x1080|1080x1920, ?strength=…,
+// ?lettering=single|stacked, ?skyline=0|1, ?halftone=0|1, ?billing=…,
+// ?preset=vice-sunset|neon-nights|golden-hour.
+// window.__shotReady is set once the scene has painted with its display
+// fonts loaded.
+import {
+  exportCoverPng, exportStoryPng, panelDefaults, applyPosterPreset,
+  LAYOUTS, GRADES, LETTERING_STYLES,
+} from './cover.js';
 
 const SAMPLES = ['pier', 'boulevard'];
 
@@ -32,6 +38,11 @@ function paintWhenReady(api) {
   }));
 }
 
+/** Mirror the scene's state back into the editor controls. */
+function syncSceneControls(api) {
+  if (typeof api.syncAllControls === 'function') api.syncAllControls();
+}
+
 export async function runShot(shot, query, api) {
   const { state } = api;
 
@@ -44,7 +55,9 @@ export async function runShot(shot, query, api) {
       await waitForFonts();
       api.redraw();
       const blob = await exportCoverPng(state, 1080, 1080);
-      window.__exportOk = blob instanceof Blob && blob.size > 0;
+      const storyBlob = await exportStoryPng(state);
+      window.__exportOk = blob instanceof Blob && blob.size > 0
+        && storyBlob instanceof Blob && storyBlob.size > 0;
       api.setStatus(window.__exportOk ? `export-ok ${blob.size} bytes` : 'export-failed');
     } catch {
       window.__exportOk = false;
@@ -62,26 +75,39 @@ export async function runShot(shot, query, api) {
   const [w, h] = size.split('x').map(Number);
   if (Number.isFinite(w) && Number.isFinite(h)) api.setCanvasSize(w, h);
 
+  // Round 3: a preset may set the whole look first; the query params
+  // below then override individual pieces, so a shot can say
+  // "the Vice Sunset preset, but with the other sample photo".
+  const preset = query.get('preset');
+  if (preset) applyPosterPreset(state, preset);
+
   const layout = query.get('layout');
   if (layout && LAYOUTS.includes(layout)) {
     state.layout = layout;
-    // Round 2: the layout's own tuned framing, so the shot shows whole
-    // faces and clearly different crops per panel.
+    // The layout's own tuned framing, so the shot shows whole faces and
+    // clearly different crops per panel.
     state.panels = panelDefaults(layout);
   }
   const grade = query.get('grade');
   if (grade && GRADES.includes(grade)) state.grade = grade;
-  // Round 2: ?strength= lets a shot push the grade a little harder
-  // (within the slider's own 0.5..1.5 range) and keeps the editor slider
-  // in sync with what the preview actually renders.
   const strength = Number(query.get('strength'));
   if (Number.isFinite(strength) && strength >= 0.5 && strength <= 1.5) {
     state.gradeStrength = strength;
-    const slider = document.getElementById('grade-strength');
-    const label = document.getElementById('grade-strength-value');
-    if (slider) slider.value = String(strength);
-    if (label) label.textContent = `${strength.toFixed(2)}×`;
   }
+  // Round 3 scene switches: stacked lettering, the skyline frame, the
+  // halftone print texture, and the billing strip text.
+  const lettering = query.get('lettering');
+  if (lettering && LETTERING_STYLES.includes(lettering)) {
+    state.letteringStyle = lettering;
+  }
+  const skyline = query.get('skyline');
+  if (skyline === '1') state.skylineFrame = true;
+  if (skyline === '0') state.skylineFrame = false;
+  const halftone = query.get('halftone');
+  if (halftone === '1') state.halftone = true;
+  if (halftone === '0') state.halftone = false;
+  const billing = query.get('billing');
+  if (billing !== null) state.billing = billing;
   state.headline = query.get('caption') ?? 'Sunset Heist';
   const tagline = query.get('tagline');
   if (tagline !== null) state.tagline = tagline;
@@ -89,6 +115,7 @@ export async function runShot(shot, query, api) {
   await api.loadSampleIntoSlot(0, photo);
   await api.loadSampleIntoSlot(1, other);
   await waitForFonts();
+  syncSceneControls(api);
   api.setStatus('Ready — pick a photo, edit the caption, export a PNG.');
   paintWhenReady(api);
 }

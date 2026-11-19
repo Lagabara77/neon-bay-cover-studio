@@ -1,9 +1,11 @@
 // Neon Bay Cover Studio — make.fun entry point (Node 22, standard library only).
 //
-// Round 2: same hand-in shape as round 1 — copy app/ and screenshots/ next
+// Round 3: same hand-in shape as round 1 — copy app/ and screenshots/ next
 // to this file into the output directory, then write dossier.json with the
 // vendored make.fun library — plus a fail-fast check that the app entry
-// point is actually there before anything is copied.
+// point is actually there before anything is copied. Round 3's app adds
+// the Movie Poster layout, the skyline frame, the Vice grade and the story
+// export, but the hand-in itself is unchanged: app/ + screenshots/ + dossier.
 //
 // The app itself is plain static files under app/ (index.html plus ES
 // modules, no build step, no network requests).

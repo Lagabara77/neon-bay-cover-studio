@@ -1,6 +1,10 @@
 // Neon Bay Cover Studio — wiring: photo slots, panel framing, caption edits,
-// exports, and the deterministic screenshot scenes (./shots.js).
-import { renderCover, exportCoverPng, layoutPanels, panelDefaults, LAYOUTS, GRADES } from './cover.js';
+// one-tap poster presets, exports (square, portrait, wide, story), and the
+// deterministic screenshot scenes (./shots.js).
+import {
+  renderCover, exportCoverPng, exportStoryPng, layoutPanels, panelDefaults,
+  applyPosterPreset, LAYOUTS, GRADES, LETTERING_STYLES,
+} from './cover.js';
 import { runShot } from './shots.js';
 
 const canvas = document.getElementById('cover');
@@ -11,6 +15,8 @@ const $ = (id) => document.getElementById(id);
 // State: library slots hold the photos; each panel points at a slot and keeps
 // its own zoom + focus point, so one photo can fill several panels cropped
 // differently. Headline/tagline live outside the panels, in their own band.
+// Round 3 adds: the skyline frame toggle, the halftone print texture, the
+// stacked lettering style, and the billing strip under the tagline.
 // ---------------------------------------------------------------------------
 const state = {
   layout: 'grid4',
@@ -20,6 +26,10 @@ const state = {
   tagline: 'One last score under the neon sun',
   footer: 'Neon Bay',
   kicker: 'Neon Bay', // small brand line above the headline (round 2)
+  billing: 'A Neon Bay Production', // billing strip (round 3)
+  letteringStyle: 'single', // 'single' | 'stacked' (round 3)
+  skylineFrame: true, // sunset skyline strip under the photos (round 3)
+  halftone: false, // print-dot texture over the photos (round 3)
   photos: [null, null, null, null], // HTMLImageElement | null
   photoNames: ['', '', '', ''],
   // Round 2: framing defaults come from the renderer, tuned per layout so
@@ -109,6 +119,36 @@ function refreshPanelPhotoOptions() {
 }
 
 // ---------------------------------------------------------------------------
+// One-tap poster presets (round 3): one button sets layout + grade +
+// lettering + skyline + halftone + grade strength, then every control is
+// re-synced so the editor shows exactly what the preset chose.
+// ---------------------------------------------------------------------------
+function syncAllControls() {
+  $('layout').value = state.layout;
+  $('grade').value = state.grade;
+  $('grade-strength').value = String(state.gradeStrength);
+  $('grade-strength-value').textContent = `${state.gradeStrength.toFixed(2)}×`;
+  $('lettering').value = state.letteringStyle;
+  $('skyline-frame').checked = state.skylineFrame;
+  $('halftone').checked = state.halftone;
+  $('headline').value = state.headline;
+  $('tagline').value = state.tagline;
+  $('billing').value = state.billing;
+  syncPanelControls();
+}
+
+function usePosterPreset(name, label) {
+  if (!applyPosterPreset(state, name)) return;
+  syncAllControls();
+  redraw();
+  setStatus(`${label} preset applied — export a PNG when it looks right.`);
+}
+
+$('preset-vice').addEventListener('click', () => usePosterPreset('vice-sunset', 'Vice Sunset'));
+$('preset-neon').addEventListener('click', () => usePosterPreset('neon-nights', 'Neon Nights'));
+$('preset-golden').addEventListener('click', () => usePosterPreset('golden-hour', 'Golden Hour'));
+
+// ---------------------------------------------------------------------------
 // Inputs.
 // ---------------------------------------------------------------------------
 $('photo-files').addEventListener('change', async (event) => {
@@ -162,6 +202,18 @@ $('grade-strength').addEventListener('input', (e) => {
   $('grade-strength-value').textContent = `${state.gradeStrength.toFixed(2)}×`;
   redraw();
 });
+$('lettering').addEventListener('change', (e) => {
+  if (LETTERING_STYLES.includes(e.target.value)) state.letteringStyle = e.target.value;
+  redraw();
+});
+$('skyline-frame').addEventListener('change', (e) => {
+  state.skylineFrame = e.target.checked;
+  redraw();
+});
+$('halftone').addEventListener('change', (e) => {
+  state.halftone = e.target.checked;
+  redraw();
+});
 $('size').addEventListener('change', (e) => {
   const [w, h] = e.target.value.split('x').map(Number);
   canvas.width = w;
@@ -174,6 +226,10 @@ $('headline').addEventListener('input', (e) => {
 });
 $('tagline').addEventListener('input', (e) => {
   state.tagline = e.target.value;
+  redraw();
+});
+$('billing').addEventListener('input', (e) => {
+  state.billing = e.target.value;
   redraw();
 });
 
@@ -223,12 +279,12 @@ function canvasPoint(event) {
 let drag = null;
 canvas.addEventListener('pointerdown', (event) => {
   const point = canvasPoint(event);
-  const panels = layoutPanels(state.layout, canvas.width, canvas.height);
+  const panels = layoutPanels(state.layout, canvas.width, canvas.height, state);
   const hit = panels.findIndex(
     (p) => point.x >= p.x && point.x < p.x + p.w && point.y >= p.y && point.y < p.y + p.h,
   );
   if (hit === -1) return;
-  selectedPanel = state.layout === 'full' ? 0 : hit;
+  selectedPanel = state.layout === 'full' || state.layout === 'poster' ? 0 : hit;
   syncPanelControls();
   const slot = state.panels[selectedPanel];
   const img = state.photos[slot.photo];
@@ -279,6 +335,23 @@ $('export-square').addEventListener('click', () => exportSize(1080, 1080));
 $('export-portrait').addEventListener('click', () => exportSize(1080, 1350));
 $('export-wide').addEventListener('click', () => exportSize(1920, 1080));
 
+/** Story export (round 3): the tall 1080x1920 cover for vertical feeds. */
+async function exportStory() {
+  setStatus('Exporting 1080×1920…');
+  try {
+    const blob = await exportStoryPng(state);
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'cover-1080x1920.png';
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 60_000);
+    setStatus('Saved cover-1080x1920.png');
+  } catch {
+    setStatus('Export failed — please try again.');
+  }
+}
+$('export-story').addEventListener('click', exportStory);
+
 // ---------------------------------------------------------------------------
 // Boot: preload the two samples so a cover is already rendered on first
 // paint, then re-render once the display fonts arrive.
@@ -295,6 +368,7 @@ if (shot) {
     redraw,
     loadSampleIntoSlot,
     setStatus,
+    syncAllControls,
     setCanvasSize(w, h) {
       canvas.width = w;
       canvas.height = h;

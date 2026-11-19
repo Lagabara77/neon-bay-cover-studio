@@ -160,6 +160,29 @@ body {
   font-weight: 600;
 }
 
+/* Round 3: one-tap preset buttons and toggle rows. */
+.preset-row {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.preset-row button {
+  flex: 1;
+  padding: 10px 8px;
+  border-color: var(--accent);
+  background: linear-gradient(135deg, #3d1150, #7c1d5e);
+}
+.preset-row button:hover { border-color: var(--accent-2); filter: brightness(1.2); }
+.controls label.check {
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.controls label.check input { accent-color: var(--accent); width: 16px; height: 16px; }
+
 .stage {
   flex: 1;
   display: flex;
@@ -194,29 +217,33 @@ body.shot-cover #cover {
   box-shadow: none;
 }
 
-/* Screenshot mode: editor shot. Round 2: the controls used to spill past
-   the bottom of a 720px viewport (the Layout & grade fieldset was cut off).
-   In shot mode the controls become a two-column grid so every fieldset and
-   the status line fit in one frame, with the preview beside them. */
+/* Screenshot mode: editor shot. Round 3: four fieldsets now (presets,
+   photos, layout & grade, caption & framing), so the controls become a
+   two-column grid with the presets row and the caption fieldset spanning
+   both columns, and the status line fits in the frame too. Shot mode also
+   tightens paddings and label gaps so all four fieldsets fit at 1024px. */
 body.shot-editor .app { gap: 16px; padding: 16px; }
 body.shot-editor .controls {
   width: 640px;
   display: grid;
   grid-template-columns: 1fr 1fr;
   align-items: start;
-  gap: 12px;
+  gap: 10px;
 }
-body.shot-editor .controls fieldset { padding: 10px 12px; }
-body.shot-editor .controls fieldset:nth-child(3) { grid-column: 1 / -1; }
-/* Fieldset 3 holds six controls: lay them out two-across in shot mode so
+body.shot-editor .controls fieldset { padding: 8px 12px; }
+body.shot-editor .controls .hint { margin-bottom: 6px; }
+body.shot-editor .preset-row button { padding: 8px 6px; }
+body.shot-editor .controls fieldset:nth-child(1),
+body.shot-editor .controls fieldset:nth-child(4) { grid-column: 1 / -1; }
+/* Fieldset 4 holds six controls: lay them out two-across in shot mode so
    the zoom slider, reset button and status line fit in the frame too. */
-body.shot-editor .controls fieldset:nth-child(3) {
+body.shot-editor .controls fieldset:nth-child(4) {
   display: grid;
   grid-template-columns: 1fr 1fr;
   column-gap: 12px;
 }
-body.shot-editor .controls fieldset:nth-child(3) .hint,
-body.shot-editor .controls fieldset:nth-child(3) #reset-frame { grid-column: 1 / -1; }
+body.shot-editor .controls fieldset:nth-child(4) .hint,
+body.shot-editor .controls fieldset:nth-child(4) #reset-frame { grid-column: 1 / -1; }
 body.shot-editor .controls label { margin-bottom: 8px; }
 body.shot-editor #status { grid-column: 1 / -1; }
 body.shot-editor #cover { max-height: calc(100vh - 150px); }
