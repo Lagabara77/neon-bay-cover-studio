@@ -3,20 +3,100 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Cover Snap</title>
+<title>Neon Bay Cover Studio</title>
 <link rel="stylesheet" href="./style.css">
 </head>
 <body>
+<header class="topbar">
+  <div class="brand">
+    <span class="brand-mark" aria-hidden="true">NB</span>
+    <div>
+      <h1>Neon Bay Cover Studio</h1>
+      <p>Photo &rarr; poster-style cover art, in three steps.</p>
+    </div>
+  </div>
+  <div class="exports" role="group" aria-label="Export cover">
+    <button id="export-square" type="button">Export 1080&times;1080</button>
+    <button id="export-portrait" type="button">Export 1080&times;1350</button>
+    <button id="export-wide" type="button">Export 1920&times;1080</button>
+  </div>
+</header>
+
 <main class="app">
-  <section class="controls">
-    <h1>Cover Snap</h1>
-    <p>A photo and a caption, made into a square cover.</p>
-    <label>Photo <input id="photo" type="file" accept="image/*"></label>
-    <label>Caption <input id="caption" type="text" maxlength="40" value="Sunset Heist"></label>
-    <button id="export" type="button">Export PNG 1080 x 1080</button>
-    <p id="status" role="status"></p>
+  <section class="controls" aria-label="Cover controls">
+    <fieldset>
+      <legend>1 &middot; Photos</legend>
+      <label class="file-label">Add your photos (up to 4)
+        <input id="photo-files" type="file" accept="image/*" multiple>
+      </label>
+      <div class="sample-row">
+        <span>Or load a sample:</span>
+        <button id="sample-pier" type="button">Pier</button>
+        <button id="sample-boulevard" type="button">Boulevard</button>
+      </div>
+      <p class="hint">Photos stay on your device &mdash; nothing is uploaded.</p>
+      <div id="slots" class="slots" aria-label="Photo slots"></div>
+    </fieldset>
+
+    <fieldset>
+      <legend>2 &middot; Layout &amp; grade</legend>
+      <label>Layout
+        <select id="layout">
+          <option value="grid4">Hero + three below</option>
+          <option value="hero3">Hero left + three stacked</option>
+          <option value="full">Full-bleed single</option>
+          <option value="quad">2 &times; 2 grid</option>
+        </select>
+      </label>
+      <label>Grade
+        <select id="grade">
+          <option value="sunset">Sunset</option>
+          <option value="neon">Neon Nights</option>
+          <option value="golden">Golden Hour</option>
+        </select>
+      </label>
+      <label>Preview size
+        <select id="size">
+          <option value="1080x1080">Square 1080 &times; 1080</option>
+          <option value="1080x1350">Portrait 1080 &times; 1350</option>
+          <option value="1920x1080">Wide 1920 &times; 1080</option>
+        </select>
+      </label>
+    </fieldset>
+
+    <fieldset>
+      <legend>3 &middot; Caption &amp; framing</legend>
+      <label>Headline
+        <input id="headline" type="text" maxlength="32" value="Sunset Heist">
+      </label>
+      <label>Tagline
+        <input id="tagline" type="text" maxlength="60" value="One last score under the neon sun">
+      </label>
+      <label>Panel
+        <select id="panel-select">
+          <option value="0">Panel 1</option>
+          <option value="1">Panel 2</option>
+          <option value="2">Panel 3</option>
+          <option value="3">Panel 4</option>
+        </select>
+      </label>
+      <label>Photo in this panel
+        <select id="panel-photo"></select>
+      </label>
+      <label>Zoom <span id="zoom-value">1.0&times;</span>
+        <input id="zoom" type="range" min="1" max="2.5" step="0.05" value="1">
+      </label>
+      <p class="hint">Drag the photo inside its panel to pan. Zoom and pan never stretch it.</p>
+      <button id="reset-frame" type="button">Reset framing</button>
+    </fieldset>
+
+    <p id="status" role="status">Ready.</p>
   </section>
-  <canvas id="cover" width="1080" height="1080" aria-label="The cover"></canvas>
+
+  <section class="stage" aria-label="Cover preview">
+    <canvas id="cover" width="1080" height="1080" aria-label="Cover preview"></canvas>
+    <p class="steps">Step 1: pick a photo &nbsp;&middot;&nbsp; Step 2: edit the caption &nbsp;&middot;&nbsp; Step 3: export a PNG.</p>
+  </section>
 </main>
 <script type="module" src="./src/main.js"></script>
 </body>
