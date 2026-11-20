@@ -231,6 +231,15 @@ body.shot-editor .controls {
   gap: 10px;
 }
 body.shot-editor .controls fieldset { padding: 8px 12px; }
+/* Round 5: the editor grew (6 sample slots, 4 presets, cast-tag input),
+   so shot mode hides the hint paragraphs and the six one-by-one sample
+   buttons (the "Load all 6 samples" button stays) and tightens the slot
+   rows — otherwise the caption fieldset falls off the bottom of the
+   1280px frame (shot 2 QA). */
+body.shot-editor .controls .hint { display: none; }
+body.shot-editor .sample-buttons { display: none; }
+body.shot-editor .slot { padding: 4px 8px; }
+body.shot-editor .sample-row { margin: 2px 0 6px; }
 body.shot-editor .controls .hint { margin-bottom: 6px; }
 body.shot-editor .preset-row button { padding: 8px 6px; }
 body.shot-editor .controls fieldset:nth-child(1),

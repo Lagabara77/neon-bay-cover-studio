@@ -6,16 +6,22 @@
 //                        window.__exportOk (blob size > 0).
 // Extra params: ?photo=pier|boulevard, ?caption=…, ?layout=…, ?grade=…,
 // ?size=1080x1080|1080x1350|1920x1080|1080x1920, ?strength=…,
-// ?lettering=single|stacked, ?skyline=0|1, ?halftone=0|1, ?billing=…,
-// ?preset=vice-sunset|neon-nights|golden-hour.
+// ?lettering=single|stacked|chrome, ?skyline=0|1, ?halftone=0|1, ?billing=…,
+// ?preset=vice-sunset|neon-nights|golden-hour|cast-crew,
+// ?cast=driver,boss,mechanic,queen,pier,boulevard (sample per slot, in
+// order — the panels are framed on each sample's face), ?tags=THE DRIVER|…
+// (role tag per panel, | separated), ?quote=…, ?quotesource=…, ?vol=…,
+// ?kicker=….
 // window.__shotReady is set once the scene has painted with its display
 // fonts loaded.
 import {
   exportCoverPng, exportStoryPng, panelDefaults, applyPosterPreset,
+  castPanelDefaults, CAST_SAMPLES, DEFAULT_CAST_TAGS,
   LAYOUTS, GRADES, LETTERING_STYLES,
 } from './cover.js';
 
 const SAMPLES = ['pier', 'boulevard'];
+const KNOWN_SAMPLES = ['driver', 'boss', 'mechanic', 'queen', 'pier', 'boulevard'];
 
 async function waitForFonts() {
   if (!document.fonts?.load) return;
@@ -111,9 +117,38 @@ export async function runShot(shot, query, api) {
   state.headline = query.get('caption') ?? 'Sunset Heist';
   const tagline = query.get('tagline');
   if (tagline !== null) state.tagline = tagline;
+  const kicker = query.get('kicker');
+  if (kicker !== null) state.kicker = kicker;
+  // Round 5 scene switches: the cast (one sample per slot, in order),
+  // the role tag per panel, and the poster furniture texts.
+  const quote = query.get('quote');
+  if (quote !== null) state.quote = quote;
+  const quoteSource = query.get('quotesource');
+  if (quoteSource !== null) state.quoteSource = quoteSource;
+  const vol = query.get('vol');
+  if (vol !== null) state.volume = vol;
+  const tags = query.get('tags');
+  if (tags !== null) {
+    const parsed = tags.split('|').map((t) => t.trim().toUpperCase()).filter(Boolean);
+    for (let i = 0; i < DEFAULT_CAST_TAGS.length; i += 1) {
+      state.castTags[i] = parsed[i] ?? DEFAULT_CAST_TAGS[i];
+    }
+  }
+  const castParam = query.get('cast');
+  const cast = castParam
+    ? castParam.split(',').map((s) => s.trim()).filter((s) => KNOWN_SAMPLES.includes(s))
+    : null;
 
-  await api.loadSampleIntoSlot(0, photo);
-  await api.loadSampleIntoSlot(1, other);
+  if (cast && cast.length > 0) {
+    for (let i = 0; i < cast.length; i += 1) {
+      await api.loadSampleIntoSlot(i, cast[i]);
+    }
+    // Each panel gets its own cast member, framed on the face.
+    state.panels = castPanelDefaults(state.layout, cast);
+  } else {
+    await api.loadSampleIntoSlot(0, photo);
+    await api.loadSampleIntoSlot(1, other);
+  }
   await waitForFonts();
   syncSceneControls(api);
   api.setStatus('Ready — pick a photo, edit the caption, export a PNG.');

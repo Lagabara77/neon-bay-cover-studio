@@ -32,6 +32,7 @@
         <button id="preset-vice" type="button">Vice Sunset</button>
         <button id="preset-neon" type="button">Neon Nights</button>
         <button id="preset-golden" type="button">Golden Hour</button>
+        <button id="preset-cast" type="button">Cast Crew</button>
       </div>
       <p class="hint">One tap sets the layout, grade, lettering, skyline and texture — then tweak anything below.</p>
       <label class="check"><input id="skyline-frame" type="checkbox" checked> Sunset skyline frame</label>
@@ -40,13 +41,20 @@
 
     <fieldset>
       <legend>1 &middot; Photos</legend>
-      <label class="file-label">Add your photos (up to 4)
+      <label class="file-label">Add your photos (up to 6)
         <input id="photo-files" type="file" accept="image/*" multiple>
       </label>
-      <div class="sample-row">
+      <div class="sample-row sample-buttons">
         <span>Or load a sample:</span>
+        <button id="sample-driver" type="button">Driver</button>
+        <button id="sample-boss" type="button">Boss</button>
+        <button id="sample-mechanic" type="button">Mechanic</button>
+        <button id="sample-queen" type="button">Queen</button>
         <button id="sample-pier" type="button">Pier</button>
         <button id="sample-boulevard" type="button">Boulevard</button>
+      </div>
+      <div class="sample-row">
+        <button id="sample-all" type="button">Load all 6 samples</button>
       </div>
       <p class="hint">Photos stay on your device &mdash; nothing is uploaded.</p>
       <div id="slots" class="slots" aria-label="Photo slots"></div>
@@ -57,6 +65,7 @@
       <label>Layout
         <select id="layout">
           <option value="poster">Movie Poster</option>
+          <option value="cast">Cast (6 faces)</option>
           <option value="grid4" selected>Hero + three below</option>
           <option value="hero3">Hero left + three stacked</option>
           <option value="full">Full-bleed single</option>
@@ -69,6 +78,7 @@
           <option value="neon">Neon Nights</option>
           <option value="golden">Golden Hour</option>
           <option value="vice">Vice</option>
+          <option value="dusk">Dusk</option>
         </select>
       </label>
       <label>Grade strength <span id="grade-strength-value">1.00&times;</span>
@@ -77,6 +87,7 @@
       <p class="hint">Push the grade harder for a bolder sunset, or pull it back to keep skin tones natural.</p>
       <label>Lettering
         <select id="lettering">
+          <option value="chrome" selected>Chrome 3D</option>
           <option value="single">Single line</option>
           <option value="stacked">Stacked (two lines)</option>
         </select>
@@ -102,12 +113,17 @@
       <label>Billing strip
         <input id="billing" type="text" maxlength="60" value="A Neon Bay Production">
       </label>
+      <label>Cast role tags (one per panel, comma-separated)
+        <input id="cast-tags" type="text" maxlength="120" value="THE DRIVER, THE BOSS, THE MECHANIC, THE QUEEN, THE RIDER, THE LOOKOUT">
+      </label>
       <label>Panel
         <select id="panel-select">
           <option value="0">Panel 1</option>
           <option value="1">Panel 2</option>
           <option value="2">Panel 3</option>
           <option value="3">Panel 4</option>
+          <option value="4">Panel 5</option>
+          <option value="5">Panel 6</option>
         </select>
       </label>
       <label>Photo in this panel

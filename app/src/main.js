@@ -3,7 +3,8 @@
 // deterministic screenshot scenes (./shots.js).
 import {
   renderCover, exportCoverPng, exportStoryPng, layoutPanels, panelDefaults,
-  applyPosterPreset, LAYOUTS, GRADES, LETTERING_STYLES,
+  applyPosterPreset, castPanelDefaults, CAST_SAMPLES, DEFAULT_CAST_TAGS,
+  LAYOUTS, GRADES, LETTERING_STYLES,
 } from './cover.js';
 import { runShot } from './shots.js';
 
@@ -27,11 +28,15 @@ const state = {
   footer: 'Neon Bay',
   kicker: 'Neon Bay', // small brand line above the headline (round 2)
   billing: 'A Neon Bay Production', // billing strip (round 3)
-  letteringStyle: 'single', // 'single' | 'stacked' (round 3)
+  letteringStyle: 'chrome', // 'single' | 'stacked' | 'chrome' (round 5: chrome default)
   skylineFrame: true, // sunset skyline strip under the photos (round 3)
   halftone: false, // print-dot texture over the photos (round 3)
-  photos: [null, null, null, null], // HTMLImageElement | null
-  photoNames: ['', '', '', ''],
+  quote: 'The coolest crew on the coast', // quote strip (round 5)
+  quoteSource: 'Neon Bay Gazette',
+  volume: 'VOL. 1', // VOL. badge (round 5)
+  castTags: [...DEFAULT_CAST_TAGS], // role tag per panel (round 5)
+  photos: [null, null, null, null, null, null], // HTMLImageElement | null
+  photoNames: ['', '', '', '', '', ''],
   // Round 2: framing defaults come from the renderer, tuned per layout so
   // faces stay whole and the four panels show different crops.
   panels: panelDefaults('grid4'),
@@ -134,6 +139,7 @@ function syncAllControls() {
   $('headline').value = state.headline;
   $('tagline').value = state.tagline;
   $('billing').value = state.billing;
+  $('cast-tags').value = state.castTags.join(', ');
   syncPanelControls();
 }
 
@@ -147,16 +153,37 @@ function usePosterPreset(name, label) {
 $('preset-vice').addEventListener('click', () => usePosterPreset('vice-sunset', 'Vice Sunset'));
 $('preset-neon').addEventListener('click', () => usePosterPreset('neon-nights', 'Neon Nights'));
 $('preset-golden').addEventListener('click', () => usePosterPreset('golden-hour', 'Golden Hour'));
+$('preset-cast').addEventListener('click', () => usePosterPreset('cast-crew', 'Cast Crew'));
 
 // ---------------------------------------------------------------------------
 // Inputs.
 // ---------------------------------------------------------------------------
+// Round 5: one button loads all six sample portraits into the six slots,
+// so the cast is complete in one tap and no slot is ever empty.
+$('sample-all').addEventListener('click', async () => {
+  let loaded = 0;
+  for (let i = 0; i < CAST_SAMPLES.length; i += 1) {
+    if (!state.photos[i]) {
+      try {
+        await loadSampleIntoSlot(i, CAST_SAMPLES[i]);
+        loaded += 1;
+      } catch {
+        // Keep going with the samples that did load.
+      }
+    }
+  }
+  // Point every panel at its own cast member, framed on the face.
+  state.panels = castPanelDefaults(state.layout, CAST_SAMPLES);
+  syncPanelControls();
+  redraw();
+  setStatus(loaded > 0 ? `Loaded ${loaded} sample photos — the cast is complete.` : 'All 6 sample photos are already loaded.');
+});
 $('photo-files').addEventListener('change', async (event) => {
   const files = [...event.target.files];
   for (const file of files) {
     const slot = firstEmptySlot();
     if (slot === -1) {
-      setStatus('All 4 photo slots are full — remove one first.');
+      setStatus('All 6 photo slots are full — remove one first.');
       break;
     }
     try {
@@ -172,16 +199,24 @@ $('photo-files').addEventListener('change', async (event) => {
 
 $('sample-pier').addEventListener('click', async () => {
   const slot = firstEmptySlot();
-  if (slot === -1) return setStatus('All 4 photo slots are full — remove one first.');
+  if (slot === -1) return setStatus('All 6 photo slots are full — remove one first.');
   await loadSampleIntoSlot(slot, 'pier');
   setStatus(`Sample pier.jpg loaded into slot ${slot + 1}.`);
 });
 $('sample-boulevard').addEventListener('click', async () => {
   const slot = firstEmptySlot();
-  if (slot === -1) return setStatus('All 4 photo slots are full — remove one first.');
+  if (slot === -1) return setStatus('All 6 photo slots are full — remove one first.');
   await loadSampleIntoSlot(slot, 'boulevard');
   setStatus(`Sample boulevard.jpg loaded into slot ${slot + 1}.`);
 });
+for (const sample of ['driver', 'boss', 'mechanic', 'queen']) {
+  $(`sample-${sample}`).addEventListener('click', async () => {
+    const slot = firstEmptySlot();
+    if (slot === -1) return setStatus('All 6 photo slots are full — remove one first.');
+    await loadSampleIntoSlot(slot, sample);
+    setStatus(`Sample ${sample}.jpg loaded into slot ${slot + 1}.`);
+  });
+}
 
 $('layout').addEventListener('change', (e) => {
   if (LAYOUTS.includes(e.target.value)) {
@@ -230,6 +265,14 @@ $('tagline').addEventListener('input', (e) => {
 });
 $('billing').addEventListener('input', (e) => {
   state.billing = e.target.value;
+  redraw();
+});
+$('cast-tags').addEventListener('input', (e) => {
+  // One comma-separated field, one tag per panel, in panel order.
+  const tags = e.target.value.split(',').map((t) => t.trim().toUpperCase()).filter(Boolean);
+  for (let i = 0; i < DEFAULT_CAST_TAGS.length; i += 1) {
+    state.castTags[i] = tags[i] ?? DEFAULT_CAST_TAGS[i];
+  }
   redraw();
 });
 
@@ -376,10 +419,12 @@ if (shot) {
   });
 } else {
   (async () => {
-    await Promise.all([
-      loadSampleIntoSlot(0, 'pier'),
-      loadSampleIntoSlot(1, 'boulevard'),
-    ]).catch(() => setStatus('Sample photos could not be loaded.'));
+    // Round 5: all six sample portraits preload, so the cast is complete
+    // and every slot is filled on first paint — never an empty slot.
+    await Promise.all(
+      CAST_SAMPLES.map((sample, i) => loadSampleIntoSlot(i, sample)),
+    ).catch(() => setStatus('Sample photos could not be loaded.'));
+    state.panels = castPanelDefaults(state.layout, CAST_SAMPLES);
     redraw();
     setStatus('Ready — pick a photo, edit the caption, export a PNG.');
   })();
