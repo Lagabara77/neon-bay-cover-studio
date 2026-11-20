@@ -37,7 +37,7 @@ export const LETTERING_STYLES = ['single', 'stacked'];
 // two-line stacked headline, a tagline AND a billing strip, like a real
 // movie poster. The panel layouts keep the tighter round-2 band.
 const BAND = 0.15;
-const POSTER_BAND = 0.27;
+const POSTER_BAND = 0.21;
 
 // Height of the sunset skyline strip, as a fraction of the cover height.
 const SKYLINE_H = 0.13;
@@ -639,24 +639,35 @@ function drawHeadline(ctx, text, bandY, bandH, width, accentA, accentB, style) {
   const cx = width / 2;
   if (style === 'stacked') {
     const lines = splitStackedHeadline(clean);
-    // Two lines share the block: each line gets a 0.26-band slot, the
-    // first centred at 0.30 and the second at 0.56, leaving the tagline
-    // (0.76) and billing strip clear below them.
+    // Two lines share the block. Round 4 raises the cap above the old
+    // one-line slot (lineH) so the stacked headline reads bigger — but
+    // NOT to the full 1.35x lineH: measured on canvas, Anton caps run
+    // ~0.87x the font size and the glyphs sit high in the em box, so at
+    // 1.35x the first line paints straight over the kicker (verified by
+    // rendering it: "NEON BAY" vanished behind "SUNSET"). At 1.15x with
+    // the lines centred at 0.34/0.67 of the band, kicker, both lines,
+    // tagline (0.78) and billing all clear each other.
     const lineH = bandH * 0.26;
     const size = fitHeadlineFont(
       ctx, lines.reduce((a, b) => (a.length >= b.length ? a : b)),
-      width * 0.94, Math.round(lineH * 0.75), Math.round(lineH),
+      width * 0.94, Math.round(lineH * 0.75), Math.round(lineH * 1.15),
     );
-    const firstCy = bandY + bandH * 0.3;
+    const lineCentres = [bandY + bandH * 0.34, bandY + bandH * 0.67];
     lines.forEach((line, i) => {
-      drawHeadlineLine(ctx, line, cx, firstCy + i * lineH, size, accentA, accentB);
+      drawHeadlineLine(ctx, line, cx, lineCentres[i], size, accentA, accentB);
     });
     return;
   }
+  // Round 4: the single line sits lower in the block (centred at 0.53 of
+  // the band, capped at 0.56x bandH) so it stays big yet clears both the
+  // kicker above it and the tagline below — at the old 0.58 centre /
+  // 0.68 cap the tagline (0.78 poster, 0.87 panels) was drawn through
+  // the headline's feet, and at 0.45 the kicker was clipped instead
+  // (Anton caps run ~0.87x the font size, so the glyphs sit high).
   const size = fitHeadlineFont(
-    ctx, clean, width * 0.94, Math.round(bandH * 0.52), Math.round(bandH * 0.68),
+    ctx, clean, width * 0.94, Math.round(bandH * 0.40), Math.round(bandH * 0.56),
   );
-  drawHeadlineLine(ctx, clean, cx, bandY + bandH * 0.58, size, accentA, accentB);
+  drawHeadlineLine(ctx, clean, cx, bandY + bandH * 0.53, size, accentA, accentB);
 }
 
 function drawKicker(ctx, text, bandY, bandH, width, accent) {
@@ -701,7 +712,7 @@ function fitCapsLine(ctx, text, maxWidth, startSize) {
 function drawTagline(ctx, text, bandY, bandH, width, yFrac) {
   const clean = text.trim();
   if (!clean) return;
-  const size = fitCapsLine(ctx, clean.toUpperCase(), width * 0.94, Math.max(13, Math.round(bandH * 0.15)));
+  const size = fitCapsLine(ctx, clean.toUpperCase(), width * 0.94, Math.max(13, Math.round(bandH * 0.11)));
   ctx.save();
   ctx.font = `600 ${size}px "Bebas Neue", "Arial Narrow", sans-serif`;
   try {
@@ -805,7 +816,7 @@ export function renderCover(canvas, state) {
   if (state.layout === 'poster') {
     drawKicker(ctx, state.kicker, bandY, bandH, w, grade.accentA);
     drawHeadline(ctx, state.headline, bandY, bandH, w, grade.accentA, grade.accentB, state.letteringStyle);
-    drawTagline(ctx, state.tagline, bandY, bandH, w, 0.74);
+    drawTagline(ctx, state.tagline, bandY, bandH, w, 0.78);
     drawBillingStrip(ctx, state.billing, bandY, bandH, w, grade.accentB);
   } else {
     // Panel layouts keep the tighter band: kicker, headline, tagline only.
