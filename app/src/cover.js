@@ -28,6 +28,7 @@
 //     billing: string,                // billing strip, e.g. "A NEON BAY PRODUCTION"
 //     credits: string,                // credits line under the billing strip (round 6)
 //     popout: boolean,                // hero3: hero card breaks the grid (round 6)
+//     sealPos: 'br' | 'tl',            // gold seal corner: bottom-right (default) or top-left (round 7)
 //     letteringStyle: 'single' | 'stacked' | 'chrome',
 //     skylineFrame: boolean,          // sunset skyline strip under the photos
 //     halftone: boolean,              // print-dot texture over the photos
@@ -85,6 +86,23 @@ export const CAST_FOCUS = {
   queen: { fx: 0.5, fy: 0.4 },
   pier: { fx: 0.5, fy: 0.3 },
   boulevard: { fx: 0.5, fy: 0.27 },
+};
+
+// Round 7: per-layout focus overrides. One focus value cannot serve
+// both the tall poster window and the short hero3 side panels — measured
+// on the round-6 renders, the poster queen's chin is sliced ~11px by the
+// skyline band (fy 0.28 puts the chin 11px below the photo area) and in
+// hero3 the queen's and the mechanic's chins sit ~4px from the panel
+// bottom. So the poster queen goes to fy 0.30 (chin clears the band by
+// ~19px) and the hero3 queen/mechanic to 0.31/0.35 (chins ~20px clear).
+// The Cast grid keeps CAST_FOCUS (round 6 verified whole faces there),
+// and every other sample keeps SAMPLE_FOCUS.
+export const LAYOUT_FOCUS_OVERRIDE = {
+  poster: { queen: { fx: 0.5, fy: 0.3 } },
+  hero3: {
+    queen: { fx: 0.5, fy: 0.31 },
+    mechanic: { fx: 0.5, fy: 0.35 },
+  },
 };
 
 // Height of the headline block, as a fraction of the cover height. Round 5
@@ -248,7 +266,13 @@ export function castPanelDefaults(layout, cast) {
   const focusTable = layout === 'cast' ? CAST_FOCUS : SAMPLE_FOCUS;
   return base.map((slot, i) => {
     const name = names[i % names.length];
-    const focus = focusTable[name] ?? { fx: 0.5, fy: 0.3 };
+    // Round 7: a layout-specific override wins over the shared table —
+    // the poster window and the hero3 side panels crop one portrait
+    // differently, so they need different focus values (see
+    // LAYOUT_FOCUS_OVERRIDE). Anything without an override keeps the
+    // round-5/round-6 framing.
+    const override = LAYOUT_FOCUS_OVERRIDE[layout]?.[name];
+    const focus = override ?? focusTable[name] ?? { fx: 0.5, fy: 0.3 };
     return { photo: i % names.length, zoom: slot.zoom, fx: focus.fx, fy: focus.fy };
   });
 }
@@ -1075,11 +1099,35 @@ function drawVolBadge(ctx, h, volume) {
   ctx.restore();
 }
 
-/** Gold starburst seal: "ORIGINAL COVER ART", bottom-right of the art. */
-function drawGoldSeal(ctx, w, photoH, h) {
+/** Gold starburst seal: "ORIGINAL COVER ART", bottom-right of the art —
+ * unless sealPos is 'tl' (round 7), which parks a smaller seal
+ * top-left under the VOL. badge, on sky/palm background. The 'tl' spot
+ * exists because in the hero3 shot the bottom-right seal sat on the
+ * Boss's hair and shoulder; top-left clears every face in that layout
+ * (the driver's hair starts ~190px in, the seal ends ~102px in). */
+function drawGoldSeal(ctx, w, photoH, h, sealPos = 'br') {
+  if (sealPos === 'tl') {
+    // Smaller seal (r ~43px at 1080) under the VOL. badge: the badge
+    // sits at y = stripH + 10 with height size + 2 * padY (same numbers
+    // as drawVolBadge), so the seal top starts 14px below the badge and
+    // clears the quote strip above it.
+    const stripH = Math.max(26, Math.round(h * 0.04));
+    const badgeSize = Math.max(13, Math.round(h * 0.016));
+    const badgeH = badgeSize + Math.round(badgeSize * 0.32) * 2;
+    const r = Math.max(30, Math.round(Math.min(w, h) * 0.04));
+    const cx = r + 16;
+    const cy = stripH + 10 + badgeH + 14 + r;
+    drawSealAt(ctx, cx, cy, r);
+    return;
+  }
   const r = Math.max(34, Math.round(Math.min(w, h) * 0.055));
   const cx = w - r - 16;
   const cy = photoH - r - 14;
+  drawSealAt(ctx, cx, cy, r);
+}
+
+/** The seal itself, centred at (cx, cy) with radius r. */
+function drawSealAt(ctx, cx, cy, r) {
   ctx.save();
   ctx.translate(cx, cy);
   ctx.rotate(-0.12);
@@ -1230,11 +1278,13 @@ export function renderCover(canvas, state) {
   // redrawn last, breaking the grid — its photo overhangs the right-hand
   // panels by one overhang and carries a drop shadow, so the hero reads
   // as a card lifted in front of the poster instead of one more tile.
-  // It is a grid-break, not a true cut-out (that needs a segmentation
-  // mask, which a static offline app has no way to make): the figure
-  // stays inside its photo, the CARD breaks out. The role tags are drawn
-  // later (furniture pass), so no chip is ever covered, and the overhang
-  // never extends downward into the headline band.
+  // Round 7: re-evaluated — a true cut-out still needs a segmentation
+  // mask, and this offline app has no way to make one (no model, no
+  // mask asset, no network). Forcing it would mean hand-cutting a mask
+  // that artefacts around hair. NOT forced: the grid-break stays — the
+  // figure stays inside its photo, the CARD breaks out. The role tags
+  // are drawn later (furniture pass), so no chip is ever covered, and
+  // the overhang never extends downward into the headline band.
   if (state.popout && state.layout === 'hero3' && count > 0) {
     const slot = state.panels[0] ?? { photo: 0, zoom: 1, fx: 0.5, fy: 0.5 };
     const img = state.photos[slot.photo] ?? null;
@@ -1250,7 +1300,7 @@ export function renderCover(canvas, state) {
   // seal, and one role-tag chip per panel.
   drawQuoteStrip(ctx, w, h, state.quote, state.quoteSource);
   drawVolBadge(ctx, h, state.volume);
-  drawGoldSeal(ctx, w, photoH, h);
+  drawGoldSeal(ctx, w, photoH, h, state.sealPos);
   const tags = state.castTags ?? [];
   for (let i = 0; i < count; i += 1) {
     drawRoleTag(ctx, panels[i], tags[i] ?? '');

@@ -13,6 +13,7 @@
 // (role tag per panel, | separated), ?quote=…, ?quotesource=…, ?vol=…,
 // ?kicker=…, ?credits=… (credits line under the billing strip),
 // ?popout=0|1 (hero3: hero card breaks the frame).
+// ?seal=br|tl (gold seal corner: bottom-right default, top-left — round 7).
 // window.__shotReady is set once the scene has painted with its display
 // fonts loaded.
 import {
@@ -122,6 +123,11 @@ export async function runShot(shot, query, api) {
   const popout = query.get('popout');
   if (popout === '1') state.popout = true;
   if (popout === '0') state.popout = false;
+  // Round 7 scene switch: the gold seal corner. 'tl' parks a smaller
+  // seal top-left under the VOL. badge (used by the hero3 shot, where
+  // the bottom-right seal sat on the Boss's hair and shoulder).
+  const seal = query.get('seal');
+  if (seal === 'tl' || seal === 'br') state.sealPos = seal;
   state.headline = query.get('caption') ?? 'Sunset Heist';
   const tagline = query.get('tagline');
   if (tagline !== null) state.tagline = tagline;
