@@ -28,6 +28,8 @@ const state = {
   footer: 'Neon Bay',
   kicker: 'Neon Bay', // small brand line above the headline (round 2)
   billing: 'A Neon Bay Production', // billing strip (round 3)
+  credits: 'Directed by Neon Bay • Shot on location • In Neon Vision', // credits line (round 6)
+  popout: false, // hero3: hero card breaks the grid (round 6)
   letteringStyle: 'chrome', // 'single' | 'stacked' | 'chrome' (round 5: chrome default)
   skylineFrame: true, // sunset skyline strip under the photos (round 3)
   halftone: false, // print-dot texture over the photos (round 3)
@@ -139,6 +141,7 @@ function syncAllControls() {
   $('headline').value = state.headline;
   $('tagline').value = state.tagline;
   $('billing').value = state.billing;
+  $('popout').checked = state.popout;
   $('cast-tags').value = state.castTags.join(', ');
   syncPanelControls();
 }
@@ -265,6 +268,10 @@ $('tagline').addEventListener('input', (e) => {
 });
 $('billing').addEventListener('input', (e) => {
   state.billing = e.target.value;
+  redraw();
+});
+$('popout').addEventListener('change', (e) => {
+  state.popout = e.target.checked;
   redraw();
 });
 $('cast-tags').addEventListener('input', (e) => {

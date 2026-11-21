@@ -26,6 +26,8 @@
 //     gradeStrength: number,          // 0.5 .. 1.5, multiplies grade alphas
 //     headline: string, tagline: string, footer: string, kicker: string,
 //     billing: string,                // billing strip, e.g. "A NEON BAY PRODUCTION"
+//     credits: string,                // credits line under the billing strip (round 6)
+//     popout: boolean,                // hero3: hero card breaks the grid (round 6)
 //     letteringStyle: 'single' | 'stacked' | 'chrome',
 //     skylineFrame: boolean,          // sunset skyline strip under the photos
 //     halftone: boolean,              // print-dot texture over the photos
@@ -64,12 +66,38 @@ export const SAMPLE_FOCUS = {
   boulevard: { fx: 0.5, fy: 0.3 },
 };
 
+// Round 6: face-centre focus for the WIDE Cast panels only. A Cast panel
+// is ~1.8:1, so it shows only a ~0.29-tall slice of a tall portrait —
+// SAMPLE_FOCUS (tuned for the tall hero/poster windows, where hair AND
+// chin fit) cuts faces there: measured on the actual portraits
+// (eyes/chin in fy: driver 0.237/0.355, boss 0.516/0.730, mechanic
+// 0.305/0.495, queen 0.345/0.500, pier 0.178/0.365, boulevard
+// 0.210/0.298), the round-5 cast framing cut the driver's mouth and
+// chin entirely and nicked the boss's and mechanic's chins. These fy
+// values sit on the face centre (eyes->chin midpoint, nudged up a touch
+// so the chin keeps headroom from the panel bottom and the role-tag
+// chip): the hair crops at the panel edge — normal poster cropping —
+// and eyes->chin stays whole in every cast panel.
+export const CAST_FOCUS = {
+  driver: { fx: 0.5, fy: 0.28 },
+  boss: { fx: 0.5, fy: 0.58 },
+  mechanic: { fx: 0.5, fy: 0.37 },
+  queen: { fx: 0.5, fy: 0.4 },
+  pier: { fx: 0.5, fy: 0.3 },
+  boulevard: { fx: 0.5, fy: 0.27 },
+};
+
 // Height of the headline block, as a fraction of the cover height. Round 5
 // raises both: the panel band 0.15 -> 0.19 so the billing strip, barcode
 // and COMING SOON fit without crowding, and the Movie Poster band 0.21 ->
 // 0.36 so the headline block itself (kicker + two-line chrome headline +
 // tagline + billing + footer) occupies ~36% of the poster height.
-const BAND = 0.19;
+// Round 6 raises the panel band 0.19 -> 0.22: the round-5 band left a
+// wide dark gap between the billing strip and the barcode/COMING SOON
+// row (worst on the 16:9 poster), and the extra ~3% buys a credits line
+// under the billing strip without crowding the tagline. The poster band
+// stays 0.36 — it already reads full.
+const BAND = 0.22;
 const POSTER_BAND = 0.36;
 
 // Height of the sunset skyline strip, as a fraction of the cover height.
@@ -214,9 +242,13 @@ export function panelDefaults(layout) {
 export function castPanelDefaults(layout, cast) {
   const base = panelDefaults(layout);
   const names = Array.isArray(cast) && cast.length > 0 ? cast : CAST_SAMPLES;
+  // Round 6: the Cast grid's wide panels frame on the face centre
+  // (CAST_FOCUS); every other layout keeps the tall-window framing
+  // (SAMPLE_FOCUS), which round 5 verified visually there.
+  const focusTable = layout === 'cast' ? CAST_FOCUS : SAMPLE_FOCUS;
   return base.map((slot, i) => {
     const name = names[i % names.length];
-    const focus = SAMPLE_FOCUS[name] ?? { fx: 0.5, fy: 0.3 };
+    const focus = focusTable[name] ?? { fx: 0.5, fy: 0.3 };
     return { photo: i % names.length, zoom: slot.zoom, fx: focus.fx, fy: focus.fy };
   });
 }
@@ -274,18 +306,22 @@ export function applyPosterPreset(state, name) {
 // ---------------------------------------------------------------------------
 const GRADE_DEFS = {
   sunset: {
+    // Round 6: the top veil/overlay stops are thinned (0.20->0.15,
+    // 0.22->0.19, 0.26->0.21) and the glow moves in from the corner
+    // (glowX 0.08->0.15) — round 5 left the top-left panel hazy orange
+    // and the glow pooled in the corner instead of reading as horizon.
     stops: [
-      [0, 255, 150, 60, 0.2],
-      [0.45, 255, 90, 90, 0.22],
+      [0, 255, 150, 60, 0.15],
+      [0.45, 255, 90, 90, 0.19],
       [0.8, 215, 40, 130, 0.24],
       [1, 70, 20, 110, 0.28],
     ],
     overlay: [
-      [0, 255, 130, 60, 0.26],
+      [0, 255, 130, 60, 0.21],
       [1, 110, 30, 150, 0.26],
     ],
     glow: [255, 190, 100],
-    glowX: 0.08,
+    glowX: 0.15,
     glowY: 0.45,
     accentA: '#ff2e88', // magenta
     accentB: '#22d3ee', // cyan
@@ -293,14 +329,19 @@ const GRADE_DEFS = {
     sat: 1.22,
   },
   neon: {
+    // Round 6: the magenta end is thinned (veil bottom 0.26->0.18, mid
+    // 0.20->0.16; overlay bottom 0.27->0.20) and saturation eased
+    // 1.28->1.22 — round 5 left the queen's skin pink-magenta in the
+    // portrait poster. The neon still reads (cyan top, magenta base),
+    // the skin just stops tinting.
     stops: [
       [0, 34, 211, 238, 0.16],
-      [0.5, 120, 60, 255, 0.2],
-      [1, 255, 46, 136, 0.26],
+      [0.5, 120, 60, 255, 0.16],
+      [1, 255, 46, 136, 0.18],
     ],
     overlay: [
       [0, 40, 200, 230, 0.19],
-      [1, 255, 50, 140, 0.27],
+      [1, 255, 50, 140, 0.2],
     ],
     glow: [255, 80, 180],
     glowX: 0.84,
@@ -308,7 +349,7 @@ const GRADE_DEFS = {
     accentA: '#22d3ee',
     accentB: '#ff2e88',
     vignette: 0.6,
-    sat: 1.28,
+    sat: 1.22,
   },
   golden: {
     stops: [
@@ -401,7 +442,7 @@ function applyGrade(ctx, w, photoH, grade, strength) {
   const gy = photoH * grade.glowY;
   const glow = ctx.createRadialGradient(gx, gy, 0, gx, gy, Math.max(w, photoH) * 0.55);
   const [gr, gg, gb] = grade.glow;
-  glow.addColorStop(0, stopColor(gr, gg, gb, 0.35, strength));
+  glow.addColorStop(0, stopColor(gr, gg, gb, 0.3, strength));
   glow.addColorStop(1, stopColor(gr, gg, gb, 0, strength));
   ctx.fillStyle = glow;
   ctx.fillRect(0, 0, w, photoH);
@@ -660,6 +701,25 @@ function drawEmptyPanel(ctx, panel, label) {
   ctx.restore();
 }
 
+/** Pop-out hero (round 6): the hero photo re-drawn in a rect that
+ * overhangs its panel to the right, on a drop shadow, so the card reads
+ * as lifted in front of its neighbours. The photo itself is re-fit to
+ * the wider rect (same uniform-scale rule), and its own white frame
+ * stroke sells the card edge. */
+function drawPopoutHero(ctx, img, panel, slot, sat) {
+  const overhang = Math.max(14, Math.round(Math.min(panel.w, panel.h) * 0.08));
+  const big = { x: panel.x, y: panel.y, w: panel.w + overhang, h: panel.h };
+  ctx.save();
+  ctx.shadowColor = 'rgba(5, 2, 12, 0.65)';
+  ctx.shadowBlur = Math.max(10, Math.round(overhang * 0.8));
+  ctx.shadowOffsetX = Math.round(overhang * 0.35);
+  ctx.shadowOffsetY = Math.round(overhang * 0.4);
+  ctx.fillStyle = '#160a24';
+  ctx.fillRect(big.x, big.y, big.w, big.h);
+  ctx.restore();
+  drawPhotoInPanel(ctx, img, big, slot.zoom, slot.fx, slot.fy, sat);
+}
+
 // ---------------------------------------------------------------------------
 // Lettering: condensed headline, white fill, black outline, magenta/cyan
 // offset shadows, a soft neon glow. Round 3 adds the Stacked style: the
@@ -897,10 +957,10 @@ function drawTagline(ctx, text, bandY, bandH, width, yFrac) {
 }
 
 /** The billing strip: small spaced caps between two hairline rules. */
-function drawBillingStrip(ctx, text, bandY, bandH, width, accent) {
+function drawBillingStrip(ctx, text, bandY, bandH, width, accent, yFrac = 0.88) {
   const clean = (text || '').trim().toUpperCase();
   if (!clean) return;
-  const y = bandY + bandH * 0.88;
+  const y = bandY + bandH * yFrac;
   const size = fitCapsLine(ctx, clean, width * 0.84, Math.max(11, Math.round(bandH * 0.075)));
   ctx.save();
   ctx.strokeStyle = 'rgba(255, 255, 255, 0.35)';
@@ -919,6 +979,37 @@ function drawBillingStrip(ctx, text, bandY, bandH, width, accent) {
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
   ctx.fillStyle = accent;
+  ctx.fillText(clean, width / 2, y);
+  ctx.restore();
+}
+
+// ---------------------------------------------------------------------------
+// Credits line (round 6): a second small-caps line under the billing
+// strip — cast credits on the panel posters, a production credit
+// otherwise. It fills the dark gap round 5 left between the billing
+// strip and the barcode/COMING SOON row. Panel layouts only: the Movie
+// Poster band is already full (kicker + two-line chrome headline +
+// tagline + billing + footer), and a centred line there would collide
+// with the barcode on the left and COMING SOON on the right.
+// ---------------------------------------------------------------------------
+function drawCreditsLine(ctx, text, bandY, bandH, width) {
+  const clean = (text || '').trim().toUpperCase();
+  if (!clean) return;
+  // 0.94 of the band: below the billing strip (0.86), above the footer
+  // row — centred, so it clears the barcode (left) and COMING SOON
+  // (right) at every export size.
+  const y = bandY + bandH * 0.94;
+  const size = fitCapsLine(ctx, clean, width * 0.84, Math.max(11, Math.round(bandH * 0.055)));
+  ctx.save();
+  ctx.font = `600 ${size}px "Bebas Neue", "Arial Narrow", sans-serif`;
+  try {
+    ctx.letterSpacing = `${Math.round(size * 0.28)}px`;
+  } catch {
+    // older canvas: letterSpacing is ignored, text still draws
+  }
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillStyle = 'rgba(255, 255, 255, 0.72)';
   ctx.fillText(clean, width / 2, y);
   ctx.restore();
 }
@@ -1135,9 +1226,23 @@ export function renderCover(canvas, state) {
     }
   }
 
+  // Round 6 pop-out hero (hero3 only, state.popout): the hero panel is
+  // redrawn last, breaking the grid — its photo overhangs the right-hand
+  // panels by one overhang and carries a drop shadow, so the hero reads
+  // as a card lifted in front of the poster instead of one more tile.
+  // It is a grid-break, not a true cut-out (that needs a segmentation
+  // mask, which a static offline app has no way to make): the figure
+  // stays inside its photo, the CARD breaks out. The role tags are drawn
+  // later (furniture pass), so no chip is ever covered, and the overhang
+  // never extends downward into the headline band.
+  if (state.popout && state.layout === 'hero3' && count > 0) {
+    const slot = state.panels[0] ?? { photo: 0, zoom: 1, fx: 0.5, fy: 0.5 };
+    const img = state.photos[slot.photo] ?? null;
+    if (img) drawPopoutHero(ctx, img, panels[0], slot, grade.sat);
+  }
+
   // Grade over the photo area: veil + overlay + sun glow.
   applyGrade(ctx, w, photoH, grade, strength);
-
   // Print-dot halftone over the photos, when the user asked for it.
   if (state.halftone) drawHalftoneTexture(ctx, w, photoH);
 
@@ -1178,7 +1283,10 @@ export function renderCover(canvas, state) {
   drawKicker(ctx, state.kicker, bandY, bandH, w, grade.accentA, isPoster);
   drawHeadline(ctx, state.headline, bandY, bandH, w, grade.accentA, grade.accentB, state.letteringStyle, isPoster);
   drawTagline(ctx, state.tagline, bandY, bandH, w, isPoster ? 0.78 : 0.72);
-  drawBillingStrip(ctx, state.billing, bandY, bandH, w, grade.accentB);
+  drawBillingStrip(ctx, state.billing, bandY, bandH, w, grade.accentB, isPoster ? 0.88 : 0.86);
+  // Round 6: the credits line fills the panel band's dark gap (see
+  // drawCreditsLine); the poster band skips it — it is already full.
+  if (!isPoster) drawCreditsLine(ctx, state.credits, bandY, bandH, w);
 
   // Footer row: barcode bottom-left, COMING SOON bottom-right.
   const barH = Math.max(12, Math.round(bandH * 0.09));

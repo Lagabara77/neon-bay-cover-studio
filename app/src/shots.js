@@ -11,7 +11,8 @@
 // ?cast=driver,boss,mechanic,queen,pier,boulevard (sample per slot, in
 // order — the panels are framed on each sample's face), ?tags=THE DRIVER|…
 // (role tag per panel, | separated), ?quote=…, ?quotesource=…, ?vol=…,
-// ?kicker=….
+// ?kicker=…, ?credits=… (credits line under the billing strip),
+// ?popout=0|1 (hero3: hero card breaks the frame).
 // window.__shotReady is set once the scene has painted with its display
 // fonts loaded.
 import {
@@ -114,6 +115,13 @@ export async function runShot(shot, query, api) {
   if (halftone === '0') state.halftone = false;
   const billing = query.get('billing');
   if (billing !== null) state.billing = billing;
+  // Round 6 scene switches: the credits line under the billing strip,
+  // and the pop-out hero for the hero3 layout.
+  const credits = query.get('credits');
+  if (credits !== null) state.credits = credits;
+  const popout = query.get('popout');
+  if (popout === '1') state.popout = true;
+  if (popout === '0') state.popout = false;
   state.headline = query.get('caption') ?? 'Sunset Heist';
   const tagline = query.get('tagline');
   if (tagline !== null) state.tagline = tagline;
